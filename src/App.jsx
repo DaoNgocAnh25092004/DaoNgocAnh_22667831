@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Trash2, UserPlus } from "lucide-react"
+import { Trash2, UserPlus, AlertTriangle } from "lucide-react"
 
 export default function StudentManagement() {
   // Dữ liệu sinh viên mẫu
@@ -24,10 +24,42 @@ export default function StudentManagement() {
   // State thông báo
   const [message, setMessage] = useState({ text: "", type: "" })
 
+  // State cho xác nhận xóa
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    show: false,
+    studentId: null,
+    studentName: "",
+  })
+
+  // Hàm hiển thị xác nhận xóa
+  const confirmDelete = (id, name) => {
+    setDeleteConfirm({
+      show: true,
+      studentId: id,
+      studentName: name,
+    })
+  }
+
+  // Hàm hủy xóa
+  const cancelDelete = () => {
+    setDeleteConfirm({
+      show: false,
+      studentId: null,
+      studentName: "",
+    })
+  }
+
   // Hàm xóa sinh viên
-  const deleteStudent = (id) => {
-    setStudents(students.filter((student) => student.id !== id))
-    showMessage("Đã xóa sinh viên thành công!", "success")
+  const deleteStudent = () => {
+    if (deleteConfirm.studentId) {
+      setStudents(students.filter((student) => student.id !== deleteConfirm.studentId))
+      showMessage(`Đã xóa sinh viên ${deleteConfirm.studentName} thành công!`, "success")
+      setDeleteConfirm({
+        show: false,
+        studentId: null,
+        studentName: "",
+      })
+    }
   }
 
   // Hàm xử lý thay đổi input
@@ -89,6 +121,50 @@ export default function StudentManagement() {
           <p className="text-center text-gray-600 mt-2">Hệ thống quản lý thông tin sinh viên</p>
         </header>
 
+        {/* Thông báo */}
+        {message.text && (
+          <div
+            className={`mb-4 p-4 rounded-md shadow-sm ${
+              message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
+
+        {/* Modal xác nhận xóa */}
+        {deleteConfirm.show && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center text-red-500 mb-4">
+                <AlertTriangle className="w-6 h-6 mr-2" />
+                <h3 className="text-lg font-semibold">Xác nhận xóa</h3>
+              </div>
+
+              <p className="mb-6">
+                Bạn có chắc chắn muốn xóa sinh viên <span className="font-semibold">{deleteConfirm.studentName}</span>?
+                Hành động này không thể hoàn tác.
+              </p>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={cancelDelete}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={deleteStudent}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors flex items-center"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Form thêm sinh viên mới */}
         <div className="bg-white rounded-lg shadow-lg mb-8 overflow-hidden">
           <div className="p-6 bg-green-500 text-white">
@@ -99,14 +175,6 @@ export default function StudentManagement() {
           </div>
 
           <form onSubmit={addStudent} className="p-6">
-            {message.text && (
-              <div
-                className={`mb-4 p-3 rounded ${message.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-              >
-                {message.text}
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -207,10 +275,10 @@ export default function StudentManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.age}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
-                        onClick={() => deleteStudent(student.id)}
-                        className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                        onClick={() => confirmDelete(student.id, student.name)}
+                        className="text-red-600 hover:text-red-900 flex items-center gap-1 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                         Xoá
