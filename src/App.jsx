@@ -59,14 +59,27 @@ const Option = ({ value, children }) => <option value={value}>{children}</option
 
 const StudentManagement = () => {
     // Dữ liệu sinh viên mẫu
-    const [students, setStudents] = useState([
-        { id: 1, name: "Nguyễn Văn A", class: "12A1", age: 18 },
-        { id: 2, name: "Trần Thị B", class: "12A2", age: 18 },
-        { id: 3, name: "Lê Văn C", class: "11B1", age: 17 },
-        { id: 4, name: "Phạm Thị D", class: "11B2", age: 17 },
-        { id: 5, name: "Hoàng Văn E", class: "10C1", age: 16 },
-        { id: 6, name: "Ngô Thị F", class: "10C2", age: 16 },
-    ])
+    const [students, setStudents] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const savedStudents = localStorage.getItem('students');
+            return savedStudents ? JSON.parse(savedStudents) : [
+                { id: 1, name: "Nguyễn Văn A", class: "12A1", age: 18 },
+                { id: 2, name: "Trần Thị B", class: "12A2", age: 18 },
+                { id: 3, name: "Lê Văn C", class: "11B1", age: 17 },
+                { id: 4, name: "Phạm Thị D", class: "11B2", age: 17 },
+                { id: 5, name: "Hoàng Văn E", class: "10C1", age: 16 },
+                { id: 6, name: "Ngô Thị F", class: "10C2", age: 16 },
+            ];
+        }
+        return [ // Giá trị mặc định để tránh lỗi phía server
+            { id: 1, name: "Nguyễn Văn A", class: "12A1", age: 18 },
+            { id: 2, name: "Trần Thị B", class: "12A2", age: 18 },
+            { id: 3, name: "Lê Văn C", class: "11B1", age: 17 },
+            { id: 4, name: "Phạm Thị D", class: "11B2", age: 17 },
+            { id: 5, name: "Hoàng Văn E", class: "10C1", age: 16 },
+            { id: 6, name: "Ngô Thị F", class: "10C2", age: 16 },
+        ];
+    });
 
     // State cho form thêm sinh viên mới
     const [newStudent, setNewStudent] = useState({
@@ -98,7 +111,25 @@ const StudentManagement = () => {
 
     // State cho lọc theo lớp
     const [selectedClass, setSelectedClass] = useState("");
-    const [availableClasses] = useState([...new Set(students.map(student => student.class))]); // Lấy danh sách lớp duy nhất
+    const [availableClasses, setAvailableClasses] = useState(() => { // Fix: Added setAvailableClasses
+        if (typeof window !== 'undefined') {
+            return [...new Set(students.map(student => student.class))]
+        }
+        return [];
+    }); // Lấy danh sách lớp duy nhất
+
+    // Lưu danh sách sinh viên vào localStorage
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('students', JSON.stringify(students));
+        }
+    }, [students]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setAvailableClasses([...new Set(students.map(student => student.class))]);
+        }
+    }, [students]);
 
     // Cập nhật danh sách sinh viên lọc khi có thay đổi trong tìm kiếm hoặc danh sách sinh viên
     useEffect(() => {
