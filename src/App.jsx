@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Trash2, UserPlus, AlertTriangle, Edit, Search } from "lucide-react"
+import { Trash2, UserPlus, AlertTriangle, Edit, Search, Filter } from "lucide-react"
 
 const Button = ({ variant, size, onClick, className, children, type, ...props }) => {
     let classes = 'px-4 py-2 rounded';
@@ -46,6 +46,14 @@ const DialogTitle = ({ children }) => <h2 className="text-lg font-semibold">{chi
 const DialogDescription = ({ children }) => <p className="text-gray-600">{children}</p>;
 const DialogFooter = ({ children }) => <div className="flex justify-end space-x-3">{children}</div>;
 const DialogTrigger = ({ children, ...props }) => <div {...props}>{children}</div>
+
+// Mock Select and Option components
+const Select = ({ value, onChange, children, className, ...props }) => (
+    <select value={value} onChange={onChange} className={`px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`} {...props}>
+        {children}
+    </select>
+);
+const Option = ({ value, children }) => <option value={value}>{children}</option>;
 // End mock components
 
 
@@ -88,14 +96,27 @@ const StudentManagement = () => {
     const [searchName, setSearchName] = useState("");
     const [filteredStudents, setFilteredStudents] = useState(students);
 
+    // State cho lọc theo lớp
+    const [selectedClass, setSelectedClass] = useState("");
+    const [availableClasses] = useState([...new Set(students.map(student => student.class))]); // Lấy danh sách lớp duy nhất
+
     // Cập nhật danh sách sinh viên lọc khi có thay đổi trong tìm kiếm hoặc danh sách sinh viên
     useEffect(() => {
+        let results = students;
+
+        // Lọc theo tên
         const lowerCaseSearchName = searchName.toLowerCase();
-        const results = students.filter(student =>
+        results = results.filter(student =>
             student.name.toLowerCase().includes(lowerCaseSearchName)
         );
+
+        // Lọc theo lớp
+        if (selectedClass) {
+            results = results.filter(student => student.class === selectedClass);
+        }
+
         setFilteredStudents(results);
-    }, [searchName, students]);
+    }, [searchName, selectedClass, students]);
 
 
     // Hàm hiển thị xác nhận xóa
@@ -140,6 +161,9 @@ const StudentManagement = () => {
             });
         } else if (name === "search") { // Handle search input
             setSearchName(value);
+        }
+        else if (name === "classFilter") { // Handle class filter
+            setSelectedClass(value);
         }
         else {
             setNewStudent({
@@ -343,22 +367,51 @@ const StudentManagement = () => {
                     </form>
                 </div>
 
-                {/* Tìm kiếm sinh viên */}
+                {/* Tìm kiếm và lọc sinh viên */}
                 <div className="bg-white rounded-lg shadow-lg mb-8 overflow-hidden">
                     <div className="p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center">
-                            <Search className="w-5 h-5 mr-2" />
-                            Tìm kiếm sinh viên
+                            <Filter className="w-5 h-5 mr-2" />
+                            Tìm kiếm và lọc sinh viên
                         </h2>
-                        <Input
-                            type="text"
-                            id="search"
-                            name="search"
-                            value={searchName}
-                            onChange={handleInputChange}
-                            placeholder="Nhập tên sinh viên để tìm kiếm..."
-                            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Tìm kiếm theo tên */}
+                            <div>
+                                <Label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tìm kiếm theo tên
+                                </Label>
+                                <Input
+                                    type="text"
+                                    id="search"
+                                    name="search"
+                                    value={searchName}
+                                    onChange={handleInputChange}
+                                    placeholder="Nhập tên sinh viên để tìm kiếm..."
+                                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            {/* Lọc theo lớp */}
+                            <div>
+                                <Label htmlFor="classFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Lọc theo lớp
+                                </Label>
+                                <Select
+                                    id="classFilter"
+                                    name="classFilter"
+                                    value={selectedClass}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <Option value="">Tất cả các lớp</Option>
+                                    {availableClasses.map(className => (
+                                        <Option key={className} value={className}>
+                                            {className}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
