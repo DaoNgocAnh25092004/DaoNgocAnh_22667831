@@ -284,19 +284,7 @@ const StudentManagement = () => {
                     <p className="text-center text-gray-600 mt-2">Hệ thống quản lý thông tin sinh viên</p>
                 </header>
 
-                {/* Thông báo */}
-                {message.text && (
-                    <div
-                        className={cn(
-                            "mb-4 p-4 rounded-md shadow-sm",
-                            message.type === "success" && "bg-green-100 text-green-700",
-                            message.type === "error" && "bg-red-100 text-red-700"
-                        )}
-                    >
-                        {message.text}
-                    </div>
-                )}
-
+               
                 {/* Modal xác nhận xóa */}
                 {deleteConfirm.show && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
