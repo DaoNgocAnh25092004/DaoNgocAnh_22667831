@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { Trash2, UserPlus, AlertTriangle, Edit, Search, Filter } from "lucide-react"
+import StudentItem from "./Component/StudentItem";
 
 const Button = ({ variant, size, onClick, className, children, type, ...props }) => {
     let classes = 'px-4 py-2 rounded';
@@ -476,38 +477,13 @@ const StudentManagement = () => {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredStudents.map((student, index) => (
-                                    <tr key={student.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                {student.class}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.age}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                onClick={() => handleEditStudent(student)}
-                                                className="text-blue-600 hover:text-blue-900"
-                                                title="Sửa"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                onClick={() => confirmDelete(student.id, student.name)}
-                                                className="text-red-600 hover:text-red-900"
-                                                title="Xóa"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </td>
-                                    </tr>
+                                   <StudentItem
+                                   key={student.id} // Thêm key prop để React theo dõi các phần tử
+                                   student={student}
+                                   index={index}
+                                   onEdit={handleEditStudent} // Sử dụng hàm handleEditStudent đã định nghĩa
+                                   onDelete={confirmDelete} // Sử dụng hàm confirmDelete để hiển thị xác nhận
+                               />
                                 ))}
                             </tbody>
                         </table>
