@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
-import { Trash2, UserPlus, AlertTriangle, Edit } from "lucide-react"
+import React, { useState, useEffect } from "react"
+import { Trash2, UserPlus, AlertTriangle, Edit, Search } from "lucide-react"
 
 const Button = ({ variant, size, onClick, className, children, type, ...props }) => {
     let classes = 'px-4 py-2 rounded';
@@ -33,12 +33,12 @@ const Label = ({ className, ...props }) => (
 );
 
 const Dialog = ({ open, onOpenChange, children }) => {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        {children}
-    </div>
-  );
+    if (!open) return null;
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            {children}
+        </div>
+    );
 };
 const DialogContent = ({ className, children, ...props }) => <div className={`bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 ${className}`} {...props}>{children}</div>;
 const DialogHeader = ({ children }) => <div>{children}</div>;
@@ -84,6 +84,19 @@ const StudentManagement = () => {
     })
     const [editingStudentData, setEditingStudentData] = useState({})
 
+    // State cho tìm kiếm
+    const [searchName, setSearchName] = useState("");
+    const [filteredStudents, setFilteredStudents] = useState(students);
+
+    // Cập nhật danh sách sinh viên lọc khi có thay đổi trong tìm kiếm hoặc danh sách sinh viên
+    useEffect(() => {
+        const lowerCaseSearchName = searchName.toLowerCase();
+        const results = students.filter(student =>
+            student.name.toLowerCase().includes(lowerCaseSearchName)
+        );
+        setFilteredStudents(results);
+    }, [searchName, students]);
+
 
     // Hàm hiển thị xác nhận xóa
     const confirmDelete = (id, name) => {
@@ -125,7 +138,10 @@ const StudentManagement = () => {
                 ...editingStudentData,
                 [name]: newValue,
             });
-        } else {
+        } else if (name === "search") { // Handle search input
+            setSearchName(value);
+        }
+        else {
             setNewStudent({
                 ...newStudent,
                 [name]: newValue,
@@ -327,11 +343,30 @@ const StudentManagement = () => {
                     </form>
                 </div>
 
+                {/* Tìm kiếm sinh viên */}
+                <div className="bg-white rounded-lg shadow-lg mb-8 overflow-hidden">
+                    <div className="p-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center">
+                            <Search className="w-5 h-5 mr-2" />
+                            Tìm kiếm sinh viên
+                        </h2>
+                        <Input
+                            type="text"
+                            id="search"
+                            name="search"
+                            value={searchName}
+                            onChange={handleInputChange}
+                            placeholder="Nhập tên sinh viên để tìm kiếm..."
+                            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                </div>
+
                 {/* Danh sách sinh viên */}
                 <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                     <div className="p-6 bg-blue-500 text-white">
                         <h2 className="text-xl font-semibold">Danh sách Sinh viên</h2>
-                        <p className="text-blue-100">Tổng số: {students.length} sinh viên</p>
+                        <p className="text-blue-100">Tổng số: {filteredStudents.length} sinh viên</p>
                     </div>
 
                     <div className="overflow-x-auto">
@@ -356,7 +391,7 @@ const StudentManagement = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {students.map((student, index) => (
+                                {filteredStudents.map((student, index) => (
                                     <tr key={student.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -394,7 +429,7 @@ const StudentManagement = () => {
                         </table>
                     </div>
 
-                    {students.length === 0 && (
+                    {filteredStudents.length === 0 && (
                         <div className="text-center py-8 text-gray-500">Không có sinh viên nào trong danh sách</div>
                     )}
                 </div>
