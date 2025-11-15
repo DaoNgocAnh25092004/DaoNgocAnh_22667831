@@ -20,6 +20,7 @@ import {
   insertGroceryItem,
   toggleBoughtStatus,
   updateGroceryItem,
+  deleteGroceryItem,
   GroceryItem,
 } from "../db";
 
@@ -168,6 +169,33 @@ export default function Page() {
     setEditingItem(null);
   };
 
+  const handleDeleteItem = (item: GroceryItem) => {
+    Alert.alert(
+      "Xác nhận xóa",
+      `Bạn có chắc chắn muốn xóa món "${item.name}" không?`,
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
+        },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteGroceryItem(item.id);
+              await loadItems();
+              Alert.alert("Thành công", "Đã xóa món khỏi danh sách!");
+            } catch (err) {
+              console.error("Failed to delete item:", err);
+              Alert.alert("Lỗi", "Không thể xóa món. Vui lòng thử lại.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (error) {
     return (
       <View
@@ -195,40 +223,57 @@ export default function Page() {
   }
 
   const renderItem = ({ item }: { item: GroceryItem }) => (
-    <TouchableOpacity
-      className="bg-white border border-gray-200 rounded-lg p-4 mb-3 mx-4"
-      onPress={() => handleToggleBought(item)}
-      onLongPress={() => handleLongPress(item)}
-      activeOpacity={0.7}
-    >
-      <View className="flex-row justify-between items-start mb-2">
-        <View className="flex-1">
-          <Text
-            className={`text-lg font-semibold ${
-              item.bought ? "text-gray-400 line-through" : "text-gray-800"
+    <View className="bg-white border border-gray-200 rounded-lg mb-3 mx-4 overflow-hidden">
+      <TouchableOpacity
+        className="p-4"
+        onPress={() => handleToggleBought(item)}
+        onLongPress={() => handleLongPress(item)}
+        activeOpacity={0.7}
+      >
+        <View className="flex-row justify-between items-start">
+          <View className="flex-1">
+            <Text
+              className={`text-lg font-semibold ${
+                item.bought ? "text-gray-400 line-through" : "text-gray-800"
+              }`}
+            >
+              {item.name}
+            </Text>
+            {item.category && (
+              <Text className="text-sm text-gray-500 mt-1">
+                {item.category}
+              </Text>
+            )}
+          </View>
+          <View
+            className={`px-3 py-1 rounded-full ${
+              item.bought ? "bg-green-100" : "bg-blue-100"
             }`}
           >
-            {item.name}
-          </Text>
-          {item.category && (
-            <Text className="text-sm text-gray-500 mt-1">{item.category}</Text>
-          )}
+            <Text
+              className={`text-xs font-medium ${
+                item.bought ? "text-green-700" : "text-blue-700"
+              }`}
+            >
+              {item.bought ? "✓ Đã mua" : `SL: ${item.quantity}`}
+            </Text>
+          </View>
         </View>
-        <View
-          className={`px-3 py-1 rounded-full ${
-            item.bought ? "bg-green-100" : "bg-blue-100"
-          }`}
+      </TouchableOpacity>
+
+      {/* Delete Button */}
+      <View className="border-t border-gray-200">
+        <TouchableOpacity
+          className="py-2 px-4 bg-red-50 active:bg-red-100"
+          onPress={() => handleDeleteItem(item)}
+          activeOpacity={0.7}
         >
-          <Text
-            className={`text-xs font-medium ${
-              item.bought ? "text-green-700" : "text-blue-700"
-            }`}
-          >
-            {item.bought ? "✓ Đã mua" : `SL: ${item.quantity}`}
+          <Text className="text-red-600 text-center text-sm font-semibold">
+            🗑️ Xóa món này
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   const renderEmptyState = () => (

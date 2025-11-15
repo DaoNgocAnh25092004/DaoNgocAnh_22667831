@@ -129,5 +129,16 @@ export const updateGroceryItem = async (
   }
 };
 
+// Xóa grocery item
+export const deleteGroceryItem = async (id: number): Promise<void> => {
+  try {
+    await db.runAsync("DELETE FROM grocery_items WHERE id = ?", [id]);
+    console.log(`Item ${id} deleted successfully`);
+  } catch (error) {
+    console.error("Error deleting grocery item:", error);
+    throw error;
+  }
+};
+
 // Export database instance
 export default db;
