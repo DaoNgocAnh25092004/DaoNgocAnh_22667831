@@ -1,10 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { Text, View, ActivityIndicator, FlatList } from "react-native";
+import {
+  Text,
+  View,
+  ActivityIndicator,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   initDatabase,
   seedSampleData,
   getAllGroceryItems,
+  insertGroceryItem,
   GroceryItem,
 } from "../db";
 
@@ -13,6 +26,13 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    quantity: "1",
+    category: "",
+  });
+  const [formError, setFormError] = useState("");
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -42,6 +62,41 @@ export default function Page() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddItem = async () => {
+    // Validate name is required
+    if (!formData.name.trim()) {
+      setFormError("Tên món không được để trống!");
+      Alert.alert("Lỗi", "Vui lòng nhập tên món cần mua");
+      return;
+    }
+
+    try {
+      const quantity = parseInt(formData.quantity) || 1;
+      const category = formData.category.trim() || null;
+
+      await insertGroceryItem(formData.name.trim(), quantity, category);
+
+      // Reset form và đóng modal
+      setFormData({ name: "", quantity: "1", category: "" });
+      setFormError("");
+      setModalVisible(false);
+
+      // Reload danh sách
+      await loadItems();
+
+      Alert.alert("Thành công", "Đã thêm món mới vào danh sách!");
+    } catch (err) {
+      console.error("Failed to add item:", err);
+      Alert.alert("Lỗi", "Không thể thêm món. Vui lòng thử lại.");
+    }
+  };
+
+  const handleCancelModal = () => {
+    setFormData({ name: "", quantity: "1", category: "" });
+    setFormError("");
+    setModalVisible(false);
   };
 
   if (error) {
@@ -135,6 +190,119 @@ export default function Page() {
           ListEmptyComponent={renderEmptyState}
         />
       )}
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        className="absolute bottom-6 right-6 bg-black w-16 h-16 rounded-full items-center justify-center shadow-lg"
+        onPress={() => setModalVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Text className="text-white text-3xl font-bold">+</Text>
+      </TouchableOpacity>
+
+      {/* Modal thêm món mới */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCancelModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <View
+              className="bg-white rounded-t-3xl p-6"
+              style={{ paddingBottom: insets.bottom + 24 }}
+            >
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-2xl font-bold text-gray-800">
+                  Thêm món mới
+                </Text>
+                <TouchableOpacity onPress={handleCancelModal}>
+                  <Text className="text-gray-500 text-2xl">✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Tên món - Bắt buộc */}
+                <View className="mb-4">
+                  <Text className="text-sm font-semibold text-gray-700 mb-2">
+                    Tên món <Text className="text-red-500">*</Text>
+                  </Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                    placeholder="Ví dụ: Cà chua"
+                    value={formData.name}
+                    onChangeText={(text) => {
+                      setFormData({ ...formData, name: text });
+                      setFormError("");
+                    }}
+                    autoFocus
+                  />
+                  {formError && (
+                    <Text className="text-red-500 text-sm mt-1">
+                      {formError}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Số lượng */}
+                <View className="mb-4">
+                  <Text className="text-sm font-semibold text-gray-700 mb-2">
+                    Số lượng
+                  </Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                    placeholder="1"
+                    value={formData.quantity}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, quantity: text })
+                    }
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                {/* Danh mục */}
+                <View className="mb-6">
+                  <Text className="text-sm font-semibold text-gray-700 mb-2">
+                    Danh mục (tùy chọn)
+                  </Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                    placeholder="Ví dụ: Rau củ"
+                    value={formData.category}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, category: text })
+                    }
+                  />
+                </View>
+
+                {/* Buttons */}
+                <View className="flex-row gap-3">
+                  <TouchableOpacity
+                    className="flex-1 bg-gray-200 py-3 rounded-lg"
+                    onPress={handleCancelModal}
+                  >
+                    <Text className="text-center text-gray-700 font-semibold text-base">
+                      Hủy
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 bg-black py-3 rounded-lg"
+                    onPress={handleAddItem}
+                  >
+                    <Text className="text-center text-white font-semibold text-base">
+                      Lưu
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

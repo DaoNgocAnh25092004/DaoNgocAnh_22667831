@@ -73,5 +73,24 @@ export const getAllGroceryItems = async (): Promise<GroceryItem[]> => {
   }
 };
 
+// Thêm mới grocery item
+export const insertGroceryItem = async (
+  name: string,
+  quantity: number = 1,
+  category: string | null = null
+): Promise<void> => {
+  try {
+    const created_at = Date.now();
+    await db.runAsync(
+      "INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, 0, ?)",
+      [name, quantity, category, created_at]
+    );
+    console.log("Item inserted successfully");
+  } catch (error) {
+    console.error("Error inserting grocery item:", error);
+    throw error;
+  }
+};
+
 // Export database instance
 export default db;
