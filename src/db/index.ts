@@ -92,5 +92,23 @@ export const insertGroceryItem = async (
   }
 };
 
+// Toggle trạng thái bought (0 ↔ 1)
+export const toggleBoughtStatus = async (
+  id: number,
+  currentStatus: number
+): Promise<void> => {
+  try {
+    const newStatus = currentStatus === 1 ? 0 : 1;
+    await db.runAsync("UPDATE grocery_items SET bought = ? WHERE id = ?", [
+      newStatus,
+      id,
+    ]);
+    console.log(`Item ${id} bought status toggled to ${newStatus}`);
+  } catch (error) {
+    console.error("Error toggling bought status:", error);
+    throw error;
+  }
+};
+
 // Export database instance
 export default db;

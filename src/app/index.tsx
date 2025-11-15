@@ -18,6 +18,7 @@ import {
   seedSampleData,
   getAllGroceryItems,
   insertGroceryItem,
+  toggleBoughtStatus,
   GroceryItem,
 } from "../db";
 
@@ -99,6 +100,17 @@ export default function Page() {
     setModalVisible(false);
   };
 
+  const handleToggleBought = async (item: GroceryItem) => {
+    try {
+      await toggleBoughtStatus(item.id, item.bought);
+      // Reload danh sách để cập nhật UI
+      await loadItems();
+    } catch (err) {
+      console.error("Failed to toggle bought status:", err);
+      Alert.alert("Lỗi", "Không thể cập nhật trạng thái. Vui lòng thử lại.");
+    }
+  };
+
   if (error) {
     return (
       <View
@@ -126,7 +138,11 @@ export default function Page() {
   }
 
   const renderItem = ({ item }: { item: GroceryItem }) => (
-    <View className="bg-white border border-gray-200 rounded-lg p-4 mb-3 mx-4">
+    <TouchableOpacity
+      className="bg-white border border-gray-200 rounded-lg p-4 mb-3 mx-4"
+      onPress={() => handleToggleBought(item)}
+      activeOpacity={0.7}
+    >
       <View className="flex-row justify-between items-start mb-2">
         <View className="flex-1">
           <Text
@@ -154,7 +170,7 @@ export default function Page() {
           </Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderEmptyState = () => (
