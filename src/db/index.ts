@@ -1,5 +1,15 @@
 import * as SQLite from "expo-sqlite";
 
+// Định nghĩa type cho GroceryItem
+export interface GroceryItem {
+  id: number;
+  name: string;
+  quantity: number;
+  category: string | null;
+  bought: number;
+  created_at: number;
+}
+
 // Mở kết nối SQLite
 const db = SQLite.openDatabaseSync("grocery.db");
 
@@ -46,6 +56,19 @@ export const seedSampleData = async (): Promise<void> => {
     }
   } catch (error) {
     console.error("Error seeding sample data:", error);
+    throw error;
+  }
+};
+
+// Lấy tất cả grocery items từ database
+export const getAllGroceryItems = async (): Promise<GroceryItem[]> => {
+  try {
+    const items = await db.getAllAsync<GroceryItem>(
+      "SELECT * FROM grocery_items ORDER BY created_at DESC"
+    );
+    return items || [];
+  } catch (error) {
+    console.error("Error getting grocery items:", error);
     throw error;
   }
 };
