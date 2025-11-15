@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Text, View, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { initDatabase } from "../db";
+import { initDatabase, seedSampleData } from "../db";
 
 export default function Page() {
   const [isDbReady, setIsDbReady] = useState(false);
@@ -12,6 +12,7 @@ export default function Page() {
     const setupDatabase = async () => {
       try {
         await initDatabase();
+        await seedSampleData();
         setIsDbReady(true);
         console.log("Database setup complete");
       } catch (err) {
