@@ -110,5 +110,24 @@ export const toggleBoughtStatus = async (
   }
 };
 
+// Cập nhật grocery item (name, quantity, category)
+export const updateGroceryItem = async (
+  id: number,
+  name: string,
+  quantity: number,
+  category: string | null
+): Promise<void> => {
+  try {
+    await db.runAsync(
+      "UPDATE grocery_items SET name = ?, quantity = ?, category = ? WHERE id = ?",
+      [name, quantity, category, id]
+    );
+    console.log(`Item ${id} updated successfully`);
+  } catch (error) {
+    console.error("Error updating grocery item:", error);
+    throw error;
+  }
+};
+
 // Export database instance
 export default db;

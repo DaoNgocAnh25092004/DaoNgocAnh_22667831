@@ -19,6 +19,7 @@ import {
   getAllGroceryItems,
   insertGroceryItem,
   toggleBoughtStatus,
+  updateGroceryItem,
   GroceryItem,
 } from "../db";
 
@@ -28,6 +29,8 @@ export default function Page() {
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     quantity: "1",
@@ -111,6 +114,60 @@ export default function Page() {
     }
   };
 
+  const handleLongPress = (item: GroceryItem) => {
+    setEditingItem(item);
+    setFormData({
+      name: item.name,
+      quantity: item.quantity.toString(),
+      category: item.category || "",
+    });
+    setEditModalVisible(true);
+  };
+
+  const handleEditItem = async () => {
+    if (!editingItem) return;
+
+    // Validate name is required
+    if (!formData.name.trim()) {
+      setFormError("Tên món không được để trống!");
+      Alert.alert("Lỗi", "Vui lòng nhập tên món cần mua");
+      return;
+    }
+
+    try {
+      const quantity = parseInt(formData.quantity) || 1;
+      const category = formData.category.trim() || null;
+
+      await updateGroceryItem(
+        editingItem.id,
+        formData.name.trim(),
+        quantity,
+        category
+      );
+
+      // Reset form và đóng modal
+      setFormData({ name: "", quantity: "1", category: "" });
+      setFormError("");
+      setEditModalVisible(false);
+      setEditingItem(null);
+
+      // Reload danh sách
+      await loadItems();
+
+      Alert.alert("Thành công", "Đã cập nhật món!");
+    } catch (err) {
+      console.error("Failed to edit item:", err);
+      Alert.alert("Lỗi", "Không thể cập nhật món. Vui lòng thử lại.");
+    }
+  };
+
+  const handleCancelEditModal = () => {
+    setFormData({ name: "", quantity: "1", category: "" });
+    setFormError("");
+    setEditModalVisible(false);
+    setEditingItem(null);
+  };
+
   if (error) {
     return (
       <View
@@ -141,6 +198,7 @@ export default function Page() {
     <TouchableOpacity
       className="bg-white border border-gray-200 rounded-lg p-4 mb-3 mx-4"
       onPress={() => handleToggleBought(item)}
+      onLongPress={() => handleLongPress(item)}
       activeOpacity={0.7}
     >
       <View className="flex-row justify-between items-start mb-2">
@@ -311,6 +369,110 @@ export default function Page() {
                   >
                     <Text className="text-center text-white font-semibold text-base">
                       Lưu
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Modal sửa món */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCancelEditModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <View
+              className="bg-white rounded-t-3xl p-6"
+              style={{ paddingBottom: insets.bottom + 24 }}
+            >
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-2xl font-bold text-gray-800">
+                  Sửa món
+                </Text>
+                <TouchableOpacity onPress={handleCancelEditModal}>
+                  <Text className="text-gray-500 text-2xl">✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Tên món - Bắt buộc */}
+                <View className="mb-4">
+                  <Text className="text-sm font-semibold text-gray-700 mb-2">
+                    Tên món <Text className="text-red-500">*</Text>
+                  </Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                    placeholder="Ví dụ: Cà chua"
+                    value={formData.name}
+                    onChangeText={(text) => {
+                      setFormData({ ...formData, name: text });
+                      setFormError("");
+                    }}
+                    autoFocus
+                  />
+                  {formError && (
+                    <Text className="text-red-500 text-sm mt-1">
+                      {formError}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Số lượng */}
+                <View className="mb-4">
+                  <Text className="text-sm font-semibold text-gray-700 mb-2">
+                    Số lượng
+                  </Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                    placeholder="1"
+                    value={formData.quantity}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, quantity: text })
+                    }
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                {/* Danh mục */}
+                <View className="mb-6">
+                  <Text className="text-sm font-semibold text-gray-700 mb-2">
+                    Danh mục (tùy chọn)
+                  </Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+                    placeholder="Ví dụ: Rau củ"
+                    value={formData.category}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, category: text })
+                    }
+                  />
+                </View>
+
+                {/* Buttons */}
+                <View className="flex-row gap-3">
+                  <TouchableOpacity
+                    className="flex-1 bg-gray-200 py-3 rounded-lg"
+                    onPress={handleCancelEditModal}
+                  >
+                    <Text className="text-center text-gray-700 font-semibold text-base">
+                      Hủy
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 bg-black py-3 rounded-lg"
+                    onPress={handleEditItem}
+                  >
+                    <Text className="text-center text-white font-semibold text-base">
+                      Cập nhật
                     </Text>
                   </TouchableOpacity>
                 </View>
