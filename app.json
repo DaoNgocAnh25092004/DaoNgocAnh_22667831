@@ -15,5 +15,24 @@
     "expo-sqlite"
   ],
   "name": "DaoNgocAnh_22667831",
-  "slug": "DaoNgocAnh_22667831"
+  "slug": "DaoNgocAnh_22667831",
+  "extra": {
+    "router": {
+      "origin": "https://n"
+    },
+    "eas": {
+      "projectId": "87ad3ac0-fd04-4b36-a2d7-a13c1e89a9a7"
+    }
+  },
+  "owner": "ngocanh25092004",
+  "expo": {
+    "android": {
+      "package": "com.ngocanh25092004.DaoNgocAnh_22667831"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3c10a44c-114d-4d3f-8582-99e25b1a8674"
+      }
+    }
+  }
 }

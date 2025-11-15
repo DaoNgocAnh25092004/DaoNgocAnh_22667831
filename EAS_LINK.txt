@@ -1,0 +1,31 @@
+# EAS Build Preview Link
+
+## Project Information
+- Project Name: DaoNgocAnh_22667831
+- Owner: @ngocanh25092004
+- Project ID: 87ad3ac0-fd04-4b36-a2d7-a13c1e89a9a7
+
+## Build Instructions
+To create an EAS preview build, run:
+```
+eas build --platform android --profile preview
+```
+
+## Build Status
+The EAS build process has been configured with eas.json file.
+
+To check build status and get the preview link, visit:
+https://expo.dev/accounts/ngocanh25092004/projects/DaoNgocAnh_22667831/builds
+
+## Preview Link
+After the build completes, the preview link will be available at:
+- Expo Dashboard: https://expo.dev/accounts/ngocanh25092004/projects/DaoNgocAnh_22667831
+- Direct APK download will be provided after build completion
+
+## How to Access Preview
+1. Visit the Expo dashboard link above
+2. Navigate to the "Builds" section
+3. Find the latest "preview" build
+4. Download the APK or scan the QR code to install on Android device
+
+Note: The actual preview link URL will be generated after running the build command and will be available in the Expo dashboard.
