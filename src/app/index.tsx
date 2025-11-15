@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Text,
   View,
@@ -11,26 +11,28 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  initDatabase,
-  seedSampleData,
-  getAllGroceryItems,
-  insertGroceryItem,
-  toggleBoughtStatus,
-  updateGroceryItem,
-  deleteGroceryItem,
-  importItemsFromAPI,
-  GroceryItem,
-} from "../db";
+import { useGroceryItems } from "../hooks/useGroceryItems";
+import type { GroceryItem } from "../db";
 
 export default function Page() {
-  const [isDbReady, setIsDbReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<GroceryItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const {
+    isDbReady,
+    error,
+    items,
+    loading,
+    importing,
+    refreshing,
+    addItem,
+    updateItem,
+    deleteItem,
+    toggleBought,
+    importFromAPI,
+    refreshItems,
+  } = useGroceryItems();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -43,61 +45,29 @@ export default function Page() {
   const [formError, setFormError] = useState("");
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    const setupDatabase = async () => {
-      try {
-        await initDatabase();
-        await seedSampleData();
-        setIsDbReady(true);
-        console.log("Database setup complete");
-        await loadItems();
-      } catch (err) {
-        console.error("Failed to initialize database:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
-      }
-    };
-
-    setupDatabase();
-  }, []);
-
-  const loadItems = async () => {
-    try {
-      setLoading(true);
-      const data = await getAllGroceryItems();
-      setItems(data);
-    } catch (err) {
-      console.error("Failed to load items:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddItem = async () => {
-    // Validate name is required
     if (!formData.name.trim()) {
       setFormError("Tên món không được để trống!");
       Alert.alert("Lỗi", "Vui lòng nhập tên món cần mua");
       return;
     }
 
-    try {
-      const quantity = parseInt(formData.quantity) || 1;
-      const category = formData.category.trim() || null;
+    const result = await addItem(
+      formData.name.trim(),
+      formData.quantity,
+      formData.category.trim()
+    );
 
-      await insertGroceryItem(formData.name.trim(), quantity, category);
-
-      // Reset form và đóng modal
+    if (result.success) {
       setFormData({ name: "", quantity: "1", category: "" });
       setFormError("");
       setModalVisible(false);
-
-      // Reload danh sách
-      await loadItems();
-
       Alert.alert("Thành công", "Đã thêm món mới vào danh sách!");
-    } catch (err) {
-      console.error("Failed to add item:", err);
-      Alert.alert("Lỗi", "Không thể thêm món. Vui lòng thử lại.");
+    } else {
+      Alert.alert(
+        "Lỗi",
+        result.error || "Không thể thêm món. Vui lòng thử lại."
+      );
     }
   };
 
@@ -108,13 +78,9 @@ export default function Page() {
   };
 
   const handleToggleBought = async (item: GroceryItem) => {
-    try {
-      await toggleBoughtStatus(item.id, item.bought);
-      // Reload danh sách để cập nhật UI
-      await loadItems();
-    } catch (err) {
-      console.error("Failed to toggle bought status:", err);
-      Alert.alert("Lỗi", "Không thể cập nhật trạng thái. Vui lòng thử lại.");
+    const result = await toggleBought(item.id);
+    if (!result.success) {
+      Alert.alert("Lỗi", result.error || "Không thể cập nhật trạng thái.");
     }
   };
 
@@ -131,37 +97,27 @@ export default function Page() {
   const handleEditItem = async () => {
     if (!editingItem) return;
 
-    // Validate name is required
     if (!formData.name.trim()) {
       setFormError("Tên món không được để trống!");
       Alert.alert("Lỗi", "Vui lòng nhập tên món cần mua");
       return;
     }
 
-    try {
-      const quantity = parseInt(formData.quantity) || 1;
-      const category = formData.category.trim() || null;
+    const result = await updateItem(
+      editingItem.id,
+      formData.name.trim(),
+      formData.quantity,
+      formData.category.trim()
+    );
 
-      await updateGroceryItem(
-        editingItem.id,
-        formData.name.trim(),
-        quantity,
-        category
-      );
-
-      // Reset form và đóng modal
+    if (result.success) {
       setFormData({ name: "", quantity: "1", category: "" });
       setFormError("");
       setEditModalVisible(false);
       setEditingItem(null);
-
-      // Reload danh sách
-      await loadItems();
-
       Alert.alert("Thành công", "Đã cập nhật món!");
-    } catch (err) {
-      console.error("Failed to edit item:", err);
-      Alert.alert("Lỗi", "Không thể cập nhật món. Vui lòng thử lại.");
+    } else {
+      Alert.alert("Lỗi", result.error || "Không thể cập nhật món.");
     }
   };
 
@@ -177,21 +133,16 @@ export default function Page() {
       "Xác nhận xóa",
       `Bạn có chắc chắn muốn xóa món "${item.name}" không?`,
       [
-        {
-          text: "Hủy",
-          style: "cancel",
-        },
+        { text: "Hủy", style: "cancel" },
         {
           text: "Xóa",
           style: "destructive",
           onPress: async () => {
-            try {
-              await deleteGroceryItem(item.id);
-              await loadItems();
+            const result = await deleteItem(item.id);
+            if (result.success) {
               Alert.alert("Thành công", "Đã xóa món khỏi danh sách!");
-            } catch (err) {
-              console.error("Failed to delete item:", err);
-              Alert.alert("Lỗi", "Không thể xóa món. Vui lòng thử lại.");
+            } else {
+              Alert.alert("Lỗi", result.error || "Không thể xóa món.");
             }
           },
         },
@@ -200,49 +151,15 @@ export default function Page() {
   };
 
   const handleImportFromAPI = async () => {
-    try {
-      setImporting(true);
+    const result = await importFromAPI();
 
-      // API mẫu - có thể thay đổi endpoint
-      const API_URL = "https://jsonplaceholder.typicode.com/todos?_limit=5";
-
-      const response = await fetch(API_URL);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Map API data to grocery items format
-      const apiItems = data.map((todo: any) => ({
-        name: todo.title,
-        quantity: 1,
-        category: "Từ API",
-        completed: todo.completed,
-      }));
-
-      // Import vào database với merge logic
-      const result = await importItemsFromAPI(apiItems);
-
-      // Reload danh sách
-      await loadItems();
-
-      // Hiển thị kết quả
+    if (result.success) {
       Alert.alert(
         "Import thành công",
         `Đã import ${result.imported} món mới.\n${result.skipped} món bị bỏ qua (trùng lặp).`
       );
-    } catch (err) {
-      console.error("Failed to import from API:", err);
-      Alert.alert(
-        "Lỗi",
-        `Không thể import từ API.\n${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
-    } finally {
-      setImporting(false);
+    } else {
+      Alert.alert("Lỗi", result.error || "Không thể import từ API.");
     }
   };
 
@@ -345,12 +262,29 @@ export default function Page() {
 
   const renderEmptyState = () => (
     <View className="flex-1 items-center justify-center p-8">
-      <Text className="text-6xl mb-4">🛒</Text>
-      <Text className="text-gray-600 text-lg text-center">
-        {searchQuery.trim()
-          ? `Không tìm thấy món nào với "${searchQuery}"`
-          : "Danh sách trống, thêm món cần mua nhé!"}
+      <View className="bg-indigo-50 rounded-full w-32 h-32 items-center justify-center mb-6">
+        <Text className="text-7xl">🛒</Text>
+      </View>
+      <Text className="text-gray-800 text-2xl font-bold text-center mb-2">
+        {searchQuery.trim() ? "Không tìm thấy" : "Danh sách trống"}
       </Text>
+      <Text className="text-gray-500 text-base text-center mb-6 px-4">
+        {searchQuery.trim()
+          ? `Không có món nào khớp với "${searchQuery}"`
+          : "Bắt đầu thêm các món bạn cần mua vào danh sách nhé!"}
+      </Text>
+      {!searchQuery.trim() && (
+        <View className="bg-white border border-gray-200 rounded-lg p-4 mx-4">
+          <Text className="text-gray-600 text-sm text-center mb-2">
+            💡 <Text className="font-semibold">Mẹo:</Text>
+          </Text>
+          <Text className="text-gray-600 text-sm text-center">
+            • Nhấn nút <Text className="font-bold">+</Text> để thêm món mới
+            {"\n"}• Kéo xuống để làm mới danh sách{"\n"}• Nhấn{" "}
+            <Text className="font-bold">📥 Import</Text> để lấy dữ liệu mẫu
+          </Text>
+        </View>
+      )}
     </View>
   );
 
@@ -401,6 +335,16 @@ export default function Page() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={{ paddingVertical: 16 }}
           ListEmptyComponent={renderEmptyState}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refreshItems}
+              colors={["#4f46e5"]}
+              tintColor="#4f46e5"
+              title="Đang tải..."
+              titleColor="#6b7280"
+            />
+          }
           initialNumToRender={20}
           maxToRenderPerBatch={20}
           windowSize={10}
@@ -410,10 +354,12 @@ export default function Page() {
 
       {/* Import từ API Button */}
       <TouchableOpacity
-        className="absolute bottom-24 right-6 bg-blue-600 px-4 py-3 rounded-full items-center justify-center shadow-lg"
+        className={`absolute bottom-24 right-6 px-4 py-3 rounded-full items-center justify-center shadow-lg ${
+          importing || loading ? "bg-blue-400" : "bg-blue-600"
+        }`}
         onPress={handleImportFromAPI}
         activeOpacity={0.8}
-        disabled={importing}
+        disabled={importing || loading}
       >
         {importing ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
@@ -427,9 +373,12 @@ export default function Page() {
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        className="absolute bottom-6 right-6 bg-black w-16 h-16 rounded-full items-center justify-center shadow-lg"
+        className={`absolute bottom-6 right-6 w-16 h-16 rounded-full items-center justify-center shadow-lg ${
+          loading || importing ? "bg-gray-400" : "bg-black"
+        }`}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.8}
+        disabled={loading || importing}
       >
         <Text className="text-white text-3xl font-bold">+</Text>
       </TouchableOpacity>
