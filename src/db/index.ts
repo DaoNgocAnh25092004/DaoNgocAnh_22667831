@@ -140,5 +140,65 @@ export const deleteGroceryItem = async (id: number): Promise<void> => {
   }
 };
 
+// Kiểm tra xem item đã tồn tại trong DB chưa (theo name)
+export const checkItemExists = async (name: string): Promise<boolean> => {
+  try {
+    const result = await db.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) as count FROM grocery_items WHERE LOWER(name) = LOWER(?)",
+      [name]
+    );
+    return result ? result.count > 0 : false;
+  } catch (error) {
+    console.error("Error checking item existence:", error);
+    throw error;
+  }
+};
+
+// Import items từ API với merge logic
+export const importItemsFromAPI = async (
+  apiItems: Array<{
+    name: string;
+    quantity?: number;
+    category?: string;
+    completed?: boolean;
+  }>
+): Promise<{ imported: number; skipped: number }> => {
+  try {
+    let imported = 0;
+    let skipped = 0;
+    const now = Date.now();
+
+    for (const apiItem of apiItems) {
+      // Kiểm tra xem item đã tồn tại chưa (theo name)
+      const exists = await checkItemExists(apiItem.name);
+
+      if (exists) {
+        skipped++;
+        console.log(`Skipped duplicate: ${apiItem.name}`);
+        continue;
+      }
+
+      // Map completed -> bought (true -> 1, false -> 0)
+      const bought = apiItem.completed ? 1 : 0;
+      const quantity = apiItem.quantity || 1;
+      const category = apiItem.category || null;
+
+      await db.runAsync(
+        "INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, ?, ?)",
+        [apiItem.name, quantity, category, bought, now]
+      );
+
+      imported++;
+      console.log(`Imported: ${apiItem.name}`);
+    }
+
+    console.log(`Import complete: ${imported} imported, ${skipped} skipped`);
+    return { imported, skipped };
+  } catch (error) {
+    console.error("Error importing items from API:", error);
+    throw error;
+  }
+};
+
 // Export database instance
 export default db;

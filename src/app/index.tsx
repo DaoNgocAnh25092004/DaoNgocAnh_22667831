@@ -21,6 +21,7 @@ import {
   toggleBoughtStatus,
   updateGroceryItem,
   deleteGroceryItem,
+  importItemsFromAPI,
   GroceryItem,
 } from "../db";
 
@@ -29,6 +30,7 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -197,6 +199,53 @@ export default function Page() {
     );
   };
 
+  const handleImportFromAPI = async () => {
+    try {
+      setImporting(true);
+
+      // API mẫu - có thể thay đổi endpoint
+      const API_URL = "https://jsonplaceholder.typicode.com/todos?_limit=5";
+
+      const response = await fetch(API_URL);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Map API data to grocery items format
+      const apiItems = data.map((todo: any) => ({
+        name: todo.title,
+        quantity: 1,
+        category: "Từ API",
+        completed: todo.completed,
+      }));
+
+      // Import vào database với merge logic
+      const result = await importItemsFromAPI(apiItems);
+
+      // Reload danh sách
+      await loadItems();
+
+      // Hiển thị kết quả
+      Alert.alert(
+        "Import thành công",
+        `Đã import ${result.imported} món mới.\n${result.skipped} món bị bỏ qua (trùng lặp).`
+      );
+    } catch (err) {
+      console.error("Failed to import from API:", err);
+      Alert.alert(
+        "Lỗi",
+        `Không thể import từ API.\n${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // Filter items based on search query using useMemo for optimization
   // Must be called before any conditional returns (Rules of Hooks)
   const filteredItems = useMemo(() => {
@@ -358,6 +407,23 @@ export default function Page() {
           removeClippedSubviews={true}
         />
       )}
+
+      {/* Import từ API Button */}
+      <TouchableOpacity
+        className="absolute bottom-24 right-6 bg-blue-600 px-4 py-3 rounded-full items-center justify-center shadow-lg"
+        onPress={handleImportFromAPI}
+        activeOpacity={0.8}
+        disabled={importing}
+      >
+        {importing ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <View className="flex-row items-center">
+            <Text className="text-white text-sm font-bold mr-1">📥</Text>
+            <Text className="text-white text-sm font-bold">Import từ API</Text>
+          </View>
+        )}
+      </TouchableOpacity>
 
       {/* Floating Action Button */}
       <TouchableOpacity
