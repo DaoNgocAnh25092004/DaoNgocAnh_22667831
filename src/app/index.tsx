@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Text,
   View,
@@ -29,6 +29,7 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<GroceryItem | null>(null);
@@ -196,6 +197,22 @@ export default function Page() {
     );
   };
 
+  // Filter items based on search query using useMemo for optimization
+  // Must be called before any conditional returns (Rules of Hooks)
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return items;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return items.filter((item) => {
+      const nameMatch = item.name.toLowerCase().includes(query);
+      const categoryMatch =
+        item.category?.toLowerCase().includes(query) || false;
+      return nameMatch || categoryMatch;
+    });
+  }, [items, searchQuery]);
+
   if (error) {
     return (
       <View
@@ -222,6 +239,7 @@ export default function Page() {
     );
   }
 
+  // Render item component
   const renderItem = ({ item }: { item: GroceryItem }) => (
     <View className="bg-white border border-gray-200 rounded-lg mb-3 mx-4 overflow-hidden">
       <TouchableOpacity
@@ -280,20 +298,47 @@ export default function Page() {
     <View className="flex-1 items-center justify-center p-8">
       <Text className="text-6xl mb-4">🛒</Text>
       <Text className="text-gray-600 text-lg text-center">
-        Danh sách trống, thêm món cần mua nhé!
+        {searchQuery.trim()
+          ? `Không tìm thấy món nào với "${searchQuery}"`
+          : "Danh sách trống, thêm món cần mua nhé!"}
       </Text>
     </View>
   );
 
   return (
     <View className="flex flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
-      <View className="bg-white p-4 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-gray-800">Grocery List</Text>
-        <Text className="text-sm text-gray-600 mt-1">
-          {items.length > 0
-            ? `${items.length} món trong danh sách`
-            : "Chưa có món nào"}
-        </Text>
+      <View className="bg-white border-b border-gray-200">
+        <View className="p-4 pb-2">
+          <Text className="text-2xl font-bold text-gray-800">Grocery List</Text>
+          <Text className="text-sm text-gray-600 mt-1">
+            {filteredItems.length > 0
+              ? `${filteredItems.length} món${
+                  searchQuery.trim() ? " được tìm thấy" : " trong danh sách"
+                }`
+              : "Chưa có món nào"}
+          </Text>
+        </View>
+
+        {/* Search Input */}
+        <View className="px-4 pb-4">
+          <View className="flex-row items-center bg-gray-100 rounded-lg px-3 py-2">
+            <Text className="text-gray-400 text-lg mr-2">🔍</Text>
+            <TextInput
+              className="flex-1 text-base text-gray-800"
+              placeholder="Tìm kiếm theo tên hoặc danh mục..."
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <Text className="text-gray-400 text-lg ml-2">✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </View>
 
       {loading ? (
@@ -302,11 +347,15 @@ export default function Page() {
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={filteredItems}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={{ paddingVertical: 16 }}
           ListEmptyComponent={renderEmptyState}
+          initialNumToRender={20}
+          maxToRenderPerBatch={20}
+          windowSize={10}
+          removeClippedSubviews={true}
         />
       )}
 
